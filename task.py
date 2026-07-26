@@ -1,6 +1,6 @@
 from functools import wraps
-
 from collections import UserDict
+from datetime import datetime, timedelta
 
 class Field:
     def __init__(self, value):
@@ -19,10 +19,19 @@ class Phone(Field):
         else:
             raise ValueError("Invalid phone number")
 
+class Birthday(Field):
+    def __init__(self, value):
+        try:
+            date = datetime.strptime(value, '%d.%m.%Y').date()
+            super().__init__(date)
+        except ValueError:
+            raise ValueError("Invalid date format. Use DD.MM.YYYY")
+
 class Record:
     def __init__(self, name):
         self.name = Name(name)
         self.phones = []
+        self.birthday = None
 
     def add_phone(self, phone):
         self.phones.append(Phone(phone))
@@ -46,6 +55,9 @@ class Record:
             if ph.value == phone:
                 return ph
         return None
+
+    def add_birthday(self, birthday):
+        self.birthday = Birthday(birthday)
 
     def __str__(self):
         return f"Contact name: {self.name.value}, phones: {'; '.join(p.value for p in self.phones)}"
@@ -71,8 +83,9 @@ def input_error(func):
     def inner(*args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except ValueError:
-            return "Error: Give me name and phone please"
+        except ValueError as e:
+            # return "Error: Give me name and phone please"
+            return str(e)
         except KeyError as e:
             return f"Contact '{e.args[0]}' not found"
         except IndexError:
@@ -112,11 +125,6 @@ def change_contact(args, book: AddressBook):
 
 @input_error
 def find_phone(args, book: AddressBook):
-    # name_to_find = args[0]
-    # for name, phone in contacts.items():
-    #     if name.lower() == name_to_find.lower():
-    #         return f"The phone number for {name}: {phone}"
-    # raise KeyError(name_to_find)
     name_to_find = args[0]
     record = book.find(name_to_find)
     if record is not None:
@@ -131,6 +139,22 @@ def find_phone(args, book: AddressBook):
     # for name, phone in contacts.items():
     #     result.append(f"{name}: {phone}")
     # return "\n".join(result)
+@input_error
+def add_birthday(args, book: AddressBook):
+    name, date = args
+    record = book.find(name)
+    if record is not None:
+        record.add_birthday(date)
+        return f"Contact {name} add birthday {date}"
+    return f"Contact {name} note founde"
+
+@input_error
+def show_birthday(args, book: AddressBook):
+    name = args[0]
+    record = book.find(name)
+    if record is not None:
+        return f"{name}'s birthday is on {record.birthday.value} "
+    return
 
 def main():
     contacts = AddressBook()
@@ -154,6 +178,10 @@ def main():
         elif command == "all":
             # print(show_all(contacts))
             print(contacts)
+        elif command == "add-birthday":
+            print(add_birthday(args, contacts))
+        elif command == "show-birthday":
+            print(show_birthday(args, contacts))
         else:
             print("Invalid command.")
 
