@@ -73,6 +73,28 @@ class AddressBook(UserDict):
         if name in self.data:
             del self.data[name]
 
+    def get_upcoming_birthdays(self):
+        upcoming = []
+        today = datetime.today().date()
+        end_date = today + timedelta(days=7)
+
+        for record in self.data.values():
+            if not record.birthday:
+                continue
+            birthday_date = record.birthday.value
+            birthday_this_year = birthday_date.replace(year=today.year)
+            if birthday_this_year < today:
+                birthday_this_year = birthday_date.replace(year=today.year+1)
+            if today <= birthday_this_year <= end_date:
+                if birthday_this_year.weekday() >= 5:
+                    birthday_this_year += timedelta(days=7-birthday_this_year.weekday())
+                upcoming.append({
+                    "name": record.name.value,
+                    "birthday": birthday_this_year.strftime("%d.%m.%Y")
+                })
+
+        return upcoming
+
     def __str__(self):
         if not self.data:
             return "Address book is empty"
@@ -156,6 +178,13 @@ def show_birthday(args, book: AddressBook):
         return f"{name}'s birthday is on {record.birthday.value} "
     return
 
+@input_error
+def birthdays(book: AddressBook):
+    birthday_days = book.get_upcoming_birthdays()
+    if not birthday_days:
+        return "nothin"
+    return "\n".join([f"{bd['name']}: {bd['birthday']}" for bd in birthday_days])
+
 def main():
     contacts = AddressBook()
     print("Welcome to the assistant bot!")
@@ -182,6 +211,8 @@ def main():
             print(add_birthday(args, contacts))
         elif command == "show-birthday":
             print(show_birthday(args, contacts))
+        elif command == "birthdays":
+            print(birthdays(contacts))
         else:
             print("Invalid command.")
 
